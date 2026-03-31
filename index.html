@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SMS Central Monitor - Multi Device OTP Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* হেডার */
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        /* স্ট্যাটস গ্রিড */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .stat-card h3 {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .stat-number {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        /* কন্ট্রোল বার */
+        .control-bar {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        select, input, button {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        select:focus, input:focus {
+            border-color: #667eea;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+
+        .btn-danger {
+            background: #f56565;
+        }
+
+        .btn-danger:hover {
+            background: #e53e3e;
+        }
+
+        .btn-success {
+            background: #48bb78;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        /* টেবিল */
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            overflow-x: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f8f9fa;
+            padding: 14px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 13px;
+            color: #4a5568;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 13px;
+        }
+
+        tr:hover {
+            background: #f7fafc;
+        }
+
+        .otp-code {
+            display: inline-block;
+            background: #f39c12;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .device-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+            background: #667eea;
+            color: white;
+        }
+
+        .sms-content {
+            max-width: 400px;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+
+        .refresh-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px;
+            color: #a0aec0;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .sms-content {
+                max-width: 180px;
+            }
+            
+            th, td {
+                padding: 8px;
+                font-size: 12px;
+            }
+            
+            .stat-number {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Multi-Device SMS Monitor</h1>
+            <p>সকল মোবাইল থেকে আসা SMS এবং OTP এক জায়গায় দেখুন</p>
+        </div>
+
+        <!-- স্ট্যাটস কার্ড -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card">
+                <h3>📨 মোট SMS</h3>
+                <div class="stat-number" id="totalSms">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>🔑 মোট OTP</h3>
+                <div class="stat-number" id="totalOtp">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>📱 সক্রিয় ডিভাইস</h3>
+                <div class="stat-number" id="activeDevices">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>⏰ শেষ ২৪ ঘন্টা</h3>
+                <div class="stat-number" id="last24h">0</div>
+            </div>
+        </div>
+
+        <!-- কন্ট্রোল বার -->
+        <div class="control-bar">
+            <div class="filter-group">
+                <select id="deviceFilter">
+                    <option value="all">📱 সব ডিভাইস</option>
+                </select>
+                <select id="otpFilter">
+                    <option value="all">📋 সব SMS</option>
+                    <option value="otp">🔑 শুধু OTP</option>
+                </select>
+                <input type="text" id="searchInput" placeholder="🔍 সার্চ (OTP বা কন্টেন্ট)" style="width: 220px;">
+            </div>
+            <div class="filter-group">
+                <button onclick="refreshData()">🔄 রিফ্রেশ</button>
+                <button onclick="exportToCSV()" class="btn-success">📥 CSV ডাউনলোড</button>
+                <button onclick="clearAllData()" class="btn-danger">🗑️ সব মুছুন</button>
+            </div>
+        </div>
+
+        <!-- টেবিল -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>📱 ডিভাইস</th>
+                        <th>🎫 সিম</th>
+                        <th>📨 সেন্ডার</th>
+                        <th>📝 SMS কন্টেন্ট</th>
+                        <th>🔑 OTP</th>
+                        <th>⏰ সময়</th>
+                        <th>⚙️</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <div>⏳ ডাটা লোড হচ্ছে...</div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="refresh-indicator" id="refreshIndicator">
+        🔄 Auto-refresh: 5s
+    </div>
+
+    <script>
+        let autoRefreshInterval;
+        
+        // ডাটা লোড করা
+        async function loadData() {
+            try {
+                const deviceFilter = document.getElementById('deviceFilter').value;
+                const otpFilter = document.getElementById('otpFilter').value;
+                const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+                
+                // স্ট্যাটস লোড
+                const statsRes = await fetch('/api/stats');
+                const stats = await statsRes.json();
+                
+                if (stats.success) {
+                    document.getElementById('totalSms').innerText = stats.stats.totalSms;
+                    document.getElementById('totalOtp').innerText = stats.stats.totalOtp;
+                    document.getElementById('activeDevices').innerText = stats.stats.deviceCount;
+                    document.getElementById('last24h').innerText = stats.stats.last24h;
+                }
+                
+                // ডিভাইস লিস্ট লোড
+                const devicesRes = await fetch('/api/devices/list');
+                const devices = await devicesRes.json();
+                
+                if (devices.success) {
+                    const deviceSelect = document.getElementById('deviceFilter');
+                    const currentValue = deviceSelect.value;
+                    deviceSelect.innerHTML = '<option value="all">📱 সব ডিভাইস</option>';
+                    devices.devices.forEach(device => {
+                        deviceSelect.innerHTML += `<option value="${device.id}">${device.name} (${device.totalSms} SMS)</option>`;
+                    });
+                    if (currentValue !== 'all' && devices.devices.find(d => d.id === currentValue)) {
+                        deviceSelect.value = currentValue;
+                    }
+                }
+                
+                // SMS লিস্ট লোড
+                let url = '/api/sms/list?limit=200';
+                if (deviceFilter !== 'all') {
+                    url += `&deviceId=${deviceFilter}`;
+                }
+                if (otpFilter === 'otp') {
+                    url += `&otpOnly=true`;
+                }
+                
+                const smsRes = await fetch(url);
+                const smsData = await smsRes.json();
+                
+                if (smsData.success) {
+                    displaySmsList(smsData.sms, searchTerm);
+                }
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                document.getElementById('tableBody').innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <div>❌ সার্ভারে সংযোগ করা যাচ্ছে না<br>সার্ভার চালু আছে কিনা চেক করুন</div>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // SMS ডিসপ্লে করা
+        function displaySmsList(smsList, searchTerm) {
+            let filteredSms = smsList;
+            
+            if (searchTerm) {
+                filteredSms = smsList.filter(sms => 
+                    sms.content.toLowerCase().includes(searchTerm) ||
+                    (sms.otp && sms.otp.includes(searchTerm)) ||
+                    sms.sender.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            const tbody = document.getElementById('tableBody');
+            
+            if (filteredSms.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="empty-state">
+                            <div>📭 কোনো SMS পাওয়া যায়নি</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = filteredSms.map((sms, index) => {
+                const time = new Date(sms.timestamp).toLocaleString('bn-BD');
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td><span class="device-badge">${escapeHtml(sms.deviceName)}</span></td>
+                        <td>${escapeHtml(sms.sim)}</td>
+                        <td>${escapeHtml(sms.sender)}</td>
+                        <td class="sms-content">${escapeHtml(sms.content)}</td>
+                        <td>${sms.otp ? `<span class="otp-code">${sms.otp}</span>` : '—'}</td>
+                        <td style="font-size: 11px; white-space: nowrap;">${time}</td>
+                        <td>
+                            <button onclick="deleteSms(${sms.id})" style="padding: 4px 8px; font-size: 11px; background: #f56565;">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        // SMS ডিলিট
+        async function deleteSms(id) {
+            if (confirm('এই SMS মুছে ফেলতে চান?')) {
+                try {
+                    const res = await fetch(`/api/sms/delete/${id}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (data.success) {
+                        refreshData();
+                    }
+                } catch (error) {
+                    console.error('Error deleting SMS:', error);
+                }
+            }
+        }
+        
+        // সব ডাটা ক্লিয়ার
+        async function clearAllData() {
+            if (confirm('⚠️ সতর্কতা: সকল SMS মুছে ফেলতে চান? এই action undo করা যাবে না।')) {
+                try {
+                    const res = await fetch('/api/sms/clear', { method: 'DELETE' });
+                    const data = await res.json();
+                    if (data.success) {
+                        refreshData();
+                        alert('✅ সকল SMS মুছে ফেলা হয়েছে');
+                    }
+                } catch (error) {
+                    console.error('Error clearing data:', error);
+                    alert('❌ ডাটা ক্লিয়ার করতে ব্যর্থ হয়েছে');
+                }
+            }
+        }
+        
+        // রিফ্রেশ
+        function refreshData() {
+            loadData();
+            const indicator = document.getElementById('refreshIndicator');
+            indicator.style.opacity = '1';
+            indicator.style.transform = 'scale(1.05)';
+            setTimeout(() => {
+                indicator.style.opacity = '0.8';
+                indicator.style.transform = 'scale(1)';
+            }, 200);
+        }
+        
+        // CSV এক্সপোর্ট
+        async function exportToCSV() {
+            try {
+                const res = await fetch('/api/sms/list?limit=5000');
+                const data = await res.json();
+                
+                if (!data.success || data.sms.length === 0) {
+                    alert('📭 কোনো ডাটা নেই');
+                    return;
+                }
+                
+                let csvContent = "ক্রমিক,ডিভাইস,সিম,সেন্ডার,SMS কন্টেন্ট,OTP,সময়\n";
+                data.sms.forEach((sms, index) => {
+                    const row = [
+                        index + 1,
+                        `"${sms.deviceName}"`,
+                        `"${sms.sim}"`,
+                        `"${sms.sender}"`,
+                        `"${sms.content.replace(/"/g, '""')}"`,
+                        `"${sms.otp || ''}"`,
+                        `"${sms.timestamp}"`
+                    ].join(',');
+                    csvContent += row + "\n";
+                });
+                
+                const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', `sms_export_${new Date().toISOString().slice(0,19)}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                alert(`✅ ${data.sms.length}টি SMS CSV ফাইলে এক্সপোর্ট করা হয়েছে`);
+            } catch (error) {
+                console.error('Error exporting:', error);
+                alert('❌ এক্সপোর্ট করতে ব্যর্থ হয়েছে');
+            }
+        }
+        
+        // HTML এস্কেপ
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // অটো রিফ্রেশ স্টার্ট
+        function startAutoRefresh() {
+            if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+            autoRefreshInterval = setInterval(() => {
+                refreshData();
+            }, 5000);
+        }
+        
+        // ইভেন্ট লিসেনার
+        document.getElementById('deviceFilter').addEventListener('change', () => refreshData());
+        document.getElementById('otpFilter').addEventListener('change', () => refreshData());
+        document.getElementById('searchInput').addEventListener('keyup', () => refreshData());
+        
+        // পৃষ্ঠা লোড হলে
+        document.addEventListener('DOMContentLoaded', () => {
+            startAutoRefresh();
+            refreshData();
+            console.log('✅ SMS Monitor Dashboard Ready!');
+        });
+    </script>
+</body>
+</html>
